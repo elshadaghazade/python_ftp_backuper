@@ -182,7 +182,7 @@ class IncrementalBackuper:
                 if os.path.exists(file['filename']):
                     fstat = os.stat(file['filename'])
                 # if file not exists or file is older or filesize is different then overwrite
-                if not os.path.exists(file['filename']) or (fstat and fstat.st_size != file['filesize']) or (fstat and int(fstat.st_mtime) != int(file['created_at'])):
+                if not os.path.exists(file['filename']) or (fstat and int(fstat.st_size) != int(file['filesize'])) or (fstat and int(fstat.st_mtime) != int(file['created_at'])):
                     # switch to directory of file
                     path = f"{self.root_dir}{file['dir']}"
                     print("CWD", path)
@@ -196,6 +196,7 @@ class IncrementalBackuper:
                             self.ftp.retrbinary(f"RETR {file['filename']}", f.write, blocksize=4096)
                         except Exception as err:
                             print(err)
+                    os.utime(file['filename'], (int(file['created_at']), int(file['created_at'])))
                 else:
                     print("File exists. Skipping...")
 
