@@ -268,13 +268,14 @@ class IncrementalBackuper:
                     else:
                         print("File exists. Skipping...")
 
-                print(f"\rFiles: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {cnt_bytes}/{self.statistics['size']}")
+                print(f"Files: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {cnt_bytes}/{self.statistics['size']}")
 
             stat = self.get_stat()
             stat['full']['downloaded'] = 1
             self.save_stat(stat)
-
-        elif action == 'finish':
+        
+        # finishing full backup
+        if not action or action == 'finish':
             stat = self.get_stat()
             if not os.path.isfile(local_root_dir + ".zip") or not stat['full']['zipped'] or not stat['full']['folder_removed']:
                 
