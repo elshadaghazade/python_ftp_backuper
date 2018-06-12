@@ -50,12 +50,12 @@ class IncrementalBackuper:
             "inc_backups": []
         }
 
-        if not os.path.isdir(self.local_root_dir):
+        if not os.path.exists(self.local_root_dir):
             os.makedirs(self.local_root_dir)
 
         filename = f"{self.local_root_dir}/.stat"
 
-        if not os.path.isfile(filename):
+        if not os.path.exists(filename):
             with open(filename, "wb") as f:
                 pickle.dump(stat, f)
 
@@ -100,7 +100,7 @@ class IncrementalBackuper:
                 self.statistics['size'] += int(file[1]['size'])
 
     def download(self):
-        if not os.path.isdir(self.local_root_dir):
+        if not os.path.exists(self.local_root_dir):
             os.makedirs(self.local_root_dir)
         
         stat = self.get_stat()
@@ -115,7 +115,7 @@ class IncrementalBackuper:
             self.take_incremental_backup()
 
     def save_list(self, fileslist):
-        if not os.path.isdir(self.local_root_dir):
+        if not os.path.exists(self.local_root_dir):
             os.makedirs(self.local_root_dir)
 
         with open(f"{self.local_root_dir}/.list", "wb") as f:
@@ -129,7 +129,7 @@ class IncrementalBackuper:
 
 
     def take_incremental_backup(self):
-        if not os.path.isdir(self.local_root_dir):
+        if not os.path.exists(self.local_root_dir):
             os.makedirs(self.local_root_dir)
 
         stat = self.get_stat()
@@ -165,21 +165,24 @@ class IncrementalBackuper:
                 path = f"{local_root_dir}{file['dir']}"
                 print("Creating directory:", path)
                 # create directory if not exists
-                if not os.path.isdir(path):
+                if not os.path.exists(path):
                     os.makedirs(path)
                 else:
                     print("Folder exists. Skipping...")
             # if node is file
             else:
                 path = f"{local_root_dir}/{file['dir']}"
-                if not os.path.isdir(path):
+                if not os.path.exists(path):
                     print("Creating directory:", path)
                     os.makedirs(path)
 
                 print("Changing local directory:", path)
                 os.chdir(f"{local_root_dir}{file['dir']}")
-                # if file not exists
-                if not os.path.isfile(file['filename']):
+                fstat = None
+                if os.path.exists(file['filename']):
+                    fstat = os.stat(file['filename'])
+                # if file not exists or file is older or filesize is different then overwrite
+                if not os.path.exists(file['filename']) or (fstat and fstat.st_size != file['filesize']) or (fstat and int(fstat.st_mtime) != int(file['created_at'])):
                     # switch to directory of file
                     path = f"{self.root_dir}{file['dir']}"
                     print("CWD", path)
@@ -236,7 +239,7 @@ class IncrementalBackuper:
                     cnt_folders += 1
                     path = f"{local_root_dir}{file['dir']}"
                     # create directory if not exists
-                    if not os.path.isdir(path):
+                    if not os.path.exists(path):
                         print("Creating directory:", path)
                         os.makedirs(path)
                     else:
@@ -245,17 +248,18 @@ class IncrementalBackuper:
                 else:
                     cnt_files += 1
                     path = f"{local_root_dir}/{file['dir']}"
-                    if not os.path.isdir(path):
+                    if not os.path.exists(path):
                         print("Creating directory:", path)
                         os.makedirs(path)
 
                     print("Changing local directory:", path)
                     os.chdir(f"{local_root_dir}{file['dir']}")
                     fstat = None
-                    if os.path.isfile(file['filename']):
+                    if os.path.exists(file['filename']):
                         fstat = os.stat(file['filename'])
+
                     # if file not exists or file is older or filesize is different then overwrite
-                    if not os.path.isfile(file['filename']) or (fstat and fstat.st_size != file['filesize']) or (fstat and int(fstat.st_mtime) != int(file['created_at'])):
+                    if not os.path.exists(file['filename']) or (fstat and int(fstat.st_size) != int(file['filesize'])) or (fstat and int(fstat.st_mtime) != int(file['created_at'])):
                         # switch to directory of file
                         path = f"{self.root_dir}{file['dir']}"
                         print("CWD", path)
@@ -267,11 +271,15 @@ class IncrementalBackuper:
                             # downloading file
                             try:
                                 self.ftp.retrbinary(f"RETR {file['filename']}", f.write, blocksize=4096)
-                                cnt_bytes += int(file['filesize'])
                             except Exception as err:
                                 print(err)
+                        
+                        # equalization access and modify times of new created file with remote one
+                        os.utime(file['filename'], (int(file['created_at']), int(file['created_at'])))
                     else:
                         print("File exists. Skipping...")
+                    # gathering downloaded files bytes
+                    cnt_bytes += int(file['filesize'])
 
                 self.print_statistics(cnt_bytes=cnt_bytes, cnt_files=cnt_files, cnt_folders=cnt_folders)
 
@@ -282,7 +290,7 @@ class IncrementalBackuper:
         # finishing full backup
         if not action or action == 'finish':
             stat = self.get_stat()
-            if not os.path.isfile(local_root_dir + ".zip") or not stat['full']['zipped'] or not stat['full']['folder_removed']:
+            if not os.path.exists(local_root_dir + ".zip") or not stat['full']['zipped'] or not stat['full']['folder_removed']:
                 
                 self.zip_folder(local_root_dir, local_root_dir + ".zip")                
                 stat['full']['zipped'] = 1
@@ -302,7 +310,7 @@ class IncrementalBackuper:
         ratio = int(columns * cnt_bytes / self.statistics['size'])
         percent = int(100 * ratio / columns)
         print("-" * columns)
-        print("#" * (ratio - 5), str(percent) + "%", "+" * (columns - ratio))
+        print("#" * (ratio - 5), str(percent) + "%", "+" * (columns - ratio - 4))
         print("-" * columns)
 
     def git_push(self, commit):
@@ -330,7 +338,7 @@ class IncrementalBackuper:
         as well.
         """
 
-        if not os.path.isdir(folder_path):
+        if not os.path.exists(folder_path):
             return
 
         print("Zipping folder", folder_path)
