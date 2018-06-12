@@ -141,8 +141,8 @@ class IncrementalBackuper:
         stat['incremental'].append(inc_stat)
         self.save_stat(stat)
 
-        folder_name = f"incremental_{incremental}_{datetime.datetime.now().year}_{datetime.datetime.now().month}_{datetime.datetime.now().day}_{datetime.datetime.now().hour}_{datetime.datetime.now().minute}_{datetime.datetime.now().second}"
-        inc_stat['prefix'] = local_root_dir = f"{self.local_root_dir}/{folder_name}"
+        inc_stat['prefix'] = folder_name = f"incremental_{incremental}_{datetime.datetime.now().year}_{datetime.datetime.now().month}_{datetime.datetime.now().day}_{datetime.datetime.now().hour}_{datetime.datetime.now().minute}_{datetime.datetime.now().second}"
+        local_root_dir = f"{self.local_root_dir}/{folder_name}"
         self.save_stat(stat)
 
         files = self.get_list()
@@ -162,6 +162,8 @@ class IncrementalBackuper:
                 # create directory if not exists
                 if not os.path.isdir(path):
                     os.makedirs(path)
+                else:
+                    print("Folder exists. Skipping...")
             # if node is file
             else:
                 path = f"{local_root_dir}/{file['dir']}"
@@ -186,6 +188,8 @@ class IncrementalBackuper:
                             self.ftp.retrbinary(f"RETR {file['filename']}", f.write, blocksize=4096)
                         except Exception as err:
                             print(err)
+                else:
+                    print("File exists. Skipping...")
 
         inc_stat['downloaded'] = 1
         self.save_stat(stat)
@@ -213,7 +217,7 @@ class IncrementalBackuper:
         self.save_list(self.files)
         # stat
         stat = self.get_stat()
-        stat['full']['prefix'] = local_root_dir
+        stat['full']['prefix'] = folder_name
         self.save_stat(stat)
 
         if not action or action == 'redownload':
@@ -230,6 +234,8 @@ class IncrementalBackuper:
                     if not os.path.isdir(path):
                         print("Creating directory:", path)
                         os.makedirs(path)
+                    else:
+                        print("Folder exists. Skipping...")
                 # if node is file
                 else:
                     cnt_files += 1
@@ -256,11 +262,13 @@ class IncrementalBackuper:
                             # downloading file
                             try:
                                 self.ftp.retrbinary(f"RETR {file['filename']}", f.write, blocksize=4096)
-                                cnt_bytes += int(fstat.st_size)
+                                cnt_bytes += int(file['filesize'])
                             except Exception as err:
                                 print(err)
+                    else:
+                        print("File exists. Skipping...")
 
-                print(f"Files: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {cnt_bytes}/{self.statistics['size']}")
+                print(f"\rFiles: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {cnt_bytes}/{self.statistics['size']}")
 
             stat = self.get_stat()
             stat['full']['downloaded'] = 1
