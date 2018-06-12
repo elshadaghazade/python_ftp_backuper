@@ -24,14 +24,12 @@ class IncrementalBackuper:
         self.ftp_pass = ftp_pass
         self.files = []
         self.root_dir = root_dir
-        self.local_root_dir = f"{str(Path.home())}/.seru_backup_tmp/{self.ftp_host}/{self.ftp_user}/{datetime.datetime.now().year}/{datetime.datetime.now().month}"
+        self.local_root_dir = f"{str(Path.home())}/.seru_backup/{self.ftp_host}/{self.ftp_user}/{datetime.datetime.now().year}/{datetime.datetime.now().month}"
         self.statistics = {
             'folders': 0,
             'files': 0,
             'size': 0
         }
-
-        print(self.get_stat())
 
     def __enter__(self):
         return self.connect()
@@ -275,11 +273,7 @@ class IncrementalBackuper:
                     else:
                         print("File exists. Skipping...")
 
-                print(f"Files: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {size(cnt_bytes)}/{size(self.statistics['size'])}")
-                ratio = int(100 * cnt_bytes / self.statistics['size'])
-                print("-" * 100)
-                print("#" * ratio, str(ratio) + "%")
-                print("-" * 100)
+                self.print_statistics(cnt_bytes=cnt_bytes, cnt_files=cnt_files, cnt_folders=cnt_folders)
 
             stat = self.get_stat()
             stat['full']['downloaded'] = 1
@@ -300,6 +294,16 @@ class IncrementalBackuper:
                 self.git_push(local_root_dir)
                 stat['full']['uploaded'] = 1
                 self.save_stat(stat)
+
+    def print_statistics(self, cnt_bytes, cnt_folders, cnt_files):
+        print(f"Files: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {size(cnt_bytes)}/{size(self.statistics['size'])}")
+        rows, columns = os.popen('stty size', 'r').read().split()
+        columns = int(columns)
+        ratio = int(columns * cnt_bytes / self.statistics['size'])
+        percent = int(100 * ratio / columns)
+        print("-" * columns)
+        print("#" * (ratio - 5), str(percent) + "%", "+" * (columns - ratio))
+        print("-" * columns)
 
     def git_push(self, commit):
         os.chdir(self.local_root_dir)
