@@ -12,6 +12,7 @@ import zipfile
 import shutil
 import subprocess
 from dotenv import load_dotenv
+from hurry.filesize import size
 
 load_dotenv()
 
@@ -23,12 +24,14 @@ class IncrementalBackuper:
         self.ftp_pass = ftp_pass
         self.files = []
         self.root_dir = root_dir
-        self.local_root_dir = f"{str(Path.home())}/.seru_backup/{self.ftp_host}/{self.ftp_user}/{datetime.datetime.now().year}/{datetime.datetime.now().month}"
+        self.local_root_dir = f"{str(Path.home())}/.seru_backup_tmp/{self.ftp_host}/{self.ftp_user}/{datetime.datetime.now().year}/{datetime.datetime.now().month}"
         self.statistics = {
             'folders': 0,
             'files': 0,
             'size': 0
         }
+
+        print(self.get_stat())
 
     def __enter__(self):
         return self.connect()
@@ -74,7 +77,7 @@ class IncrementalBackuper:
         files = self.ftp.mlsd()
         for file in files:
             sys.stdout.flush()
-            print(f"""\rFiles: {self.statistics['files']} | Folders: {self.statistics['folders']} | Total size: {self.statistics['size']} | Scanning: {path}""", end="")
+            print(f"""\rFiles: {self.statistics['files']} | Folders: {self.statistics['folders']} | Total size: {size(self.statistics['size'])} | Scanning: {path}""", end="")
             if file[1]['type'] == 'dir':
                 self.files.append({
                     "is_dir": True,
@@ -272,7 +275,7 @@ class IncrementalBackuper:
                     else:
                         print("File exists. Skipping...")
 
-                print(f"Files: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {cnt_bytes}/{self.statistics['size']}")
+                print(f"Files: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {size(cnt_bytes)}/{size(self.statistics['size'])}")
                 ratio = int(100 * cnt_bytes / self.statistics['size'])
                 print("-" * 100)
                 print("#" * ratio, str(ratio) + "%")
