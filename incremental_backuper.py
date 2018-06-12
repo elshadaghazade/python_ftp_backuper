@@ -46,7 +46,7 @@ class IncrementalBackuper:
                 "folder_removed": 0,
                 "uploaded": 0
             },
-            "incremental": []
+            "inc_backups": []
         }
 
         filename = f"{self.local_root_dir}/.stat"
@@ -138,7 +138,8 @@ class IncrementalBackuper:
             "uploaded": 0
         }
 
-        stat['incremental'].append(inc_stat)
+        stat['inc_backups'].append(inc_stat)
+        stat['incremental'] = incremental
         self.save_stat(stat)
 
         inc_stat['prefix'] = folder_name = f"incremental_{incremental}_{datetime.datetime.now().year}_{datetime.datetime.now().month}_{datetime.datetime.now().day}_{datetime.datetime.now().hour}_{datetime.datetime.now().minute}_{datetime.datetime.now().second}"
