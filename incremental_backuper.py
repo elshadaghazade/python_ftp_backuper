@@ -49,6 +49,9 @@ class IncrementalBackuper:
             "inc_backups": []
         }
 
+        if not os.path.isdir(self.local_root_dir):
+            os.makedirs(self.local_root_dir)
+
         filename = f"{self.local_root_dir}/.stat"
 
         if not os.path.isfile(filename):
@@ -270,6 +273,10 @@ class IncrementalBackuper:
                         print("File exists. Skipping...")
 
                 print(f"Files: {cnt_files}/{self.statistics['files']} | Folders: {cnt_folders}/{self.statistics['folders']} | Total size: {cnt_bytes}/{self.statistics['size']}")
+                ratio = int(100 * cnt_bytes / self.statistics['size'])
+                print("-" * 100)
+                print("#" * ratio, str(ratio) + "%")
+                print("-" * 100)
 
             stat = self.get_stat()
             stat['full']['downloaded'] = 1
