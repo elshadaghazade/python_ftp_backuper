@@ -234,6 +234,8 @@ class IncrementalBackuper:
             cnt_folders = 0
             cnt_bytes = 0
             
+            previous_path = ""
+            previous_local_path = ""
             for index, file in enumerate(self.files):
                 # if node is dir
                 if file['is_dir']:
@@ -253,8 +255,11 @@ class IncrementalBackuper:
                         print("Creating directory:", path)
                         os.makedirs(path)
 
-                    print("Changing local directory:", path)
-                    os.chdir(f"{local_root_dir}{file['dir']}")
+                    if previous_local_path != path:
+                        print("Changing local directory:", path)
+                        os.chdir(f"{local_root_dir}{file['dir']}")
+                        previous_local_path = path
+
                     fstat = None
                     if os.path.exists(file['filename']):
                         fstat = os.stat(file['filename'])
@@ -263,10 +268,12 @@ class IncrementalBackuper:
                     if not os.path.exists(file['filename']) or (fstat and int(fstat.st_size) != int(file['filesize'])) or (fstat and int(fstat.st_mtime) != int(file['created_at'])):
                         # switch to directory of file
                         path = f"{self.root_dir}{file['dir']}"
-                        print("CWD", path)
-                        self.ftp.cwd(path)
+                        if previous_path != path:
+                            print("CWD", path)
+                            self.ftp.cwd(path)
+                            previous_path = path
                         # download and create file
-                        print("RETR", file['filename'])
+                        print("RETR", f"{path}/{file['filename']}", "|", size(int(file['filesize'])))
                         
                         with open(file['filename'], "wb") as f:
                             # downloading file
