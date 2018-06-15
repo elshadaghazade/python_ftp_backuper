@@ -17,7 +17,7 @@ import celery
 
 load_dotenv()
 
-app = celery.Celery('ftp', broker='amqp://host1.local', backend='amqp://host1.local')
+app = celery.Celery('ftp', broker='amqp://elshad:lappin555@host1.local', backend='amqp://elshad:lappin555@host1.local')
 
 
 class IncrementalBackuper:
