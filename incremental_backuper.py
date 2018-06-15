@@ -77,7 +77,7 @@ class IncrementalBackuper:
     def ftp_mlsd(self, path):
         files = self.ftp.mlsd()
         for file in files:
-            self.gather_files.delay(file)
+            self.gather_files.delay(file=file)
 
     @app.task
     def gather_files(self, file):
