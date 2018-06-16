@@ -103,7 +103,7 @@ class IncrementalBackuper:
     def ftp_mlsd(self, path):
         files = self.ftp.mlsd()
         for file in files:
-            gather_files.delay(file=file, statistics=self.statistics, files=self.files, take_backup=self.take_backup)
+            gather_files.delay(file=file, statistics=self.statistics, files=self.files, take_backup=self.take_backup, path=path)
 
     
 
