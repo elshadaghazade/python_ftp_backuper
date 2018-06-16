@@ -13,38 +13,9 @@ import shutil
 import subprocess
 from dotenv import load_dotenv
 from hurry.filesize import size
-import celery
 
 load_dotenv()
 
-app = celery.Celery('ftp', broker='amqp://elshad:lappin555@host1.local', backend='amqp://elshad:lappin555@host1.local')
-
-@app.task
-def gather_files(file, statistics, files, take_backup, path):
-    sys.stdout.flush()
-    print(f"""\rFiles: {statistics['files']} | Folders: {statistics['folders']} | Total size: {size(statistics['size'])} | Scanning: {path}""", end="")
-    if file[1]['type'] == 'dir':
-        files.append({
-            "is_dir": True,
-            "path": f"{path}/{file[0]}",
-            "dir": path,
-            "filename": file[0],
-            "created_at": file[1]['modify'],
-            "filesize": 0
-        })
-        take_backup(f"{path}/{file[0]}")
-        statistics['folders'] += 1
-    elif file[1]['type'] == 'file':
-        files.append({
-            "is_dir": False,
-            "path": f"{path}/{file[0]}",
-            "dir": path,
-            "filename": file[0],
-            "created_at": file[1]['modify'],
-            "filesize": file[1]['size']
-        })
-        statistics['files'] += 1
-        statistics['size'] += int(file[1]['size'])
 
 class IncrementalBackuper:
     def __init__(self, ftp_host, ftp_user, ftp_pass, root_dir="/"):
@@ -103,9 +74,30 @@ class IncrementalBackuper:
     def ftp_mlsd(self, path):
         files = self.ftp.mlsd()
         for file in files:
-            gather_files.delay(file=file, statistics=self.statistics, files=self.files, take_backup=self.take_backup, path=path)
-
-    
+            sys.stdout.flush()
+            print(f"""\rFiles: {self.statistics['files']} | Folders: {self.statistics['folders']} | Total size: {size(self.statistics['size'])} | Scanning: {path}""", end="")
+            if file[1]['type'] == 'dir':
+                self.files.append({
+                    "is_dir": True,
+                    "path": f"{path}/{file[0]}",
+                    "dir": path,
+                    "filename": file[0],
+                    "created_at": file[1]['modify'],
+                    "filesize": 0
+                })
+                self.take_backup(f"{path}/{file[0]}")
+                self.statistics['folders'] += 1
+            elif file[1]['type'] == 'file':
+                self.files.append({
+                    "is_dir": False,
+                    "path": f"{path}/{file[0]}",
+                    "dir": path,
+                    "filename": file[0],
+                    "created_at": file[1]['modify'],
+                    "filesize": file[1]['size']
+                })
+                self.statistics['files'] += 1
+                self.statistics['size'] += int(file[1]['size'])
 
     def download(self):
         if not os.path.exists(self.local_root_dir):
